@@ -3,6 +3,7 @@ package com.mycelo.checkintracker;
 import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.SystemClock;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -17,15 +18,19 @@ public class MyLocationListener implements
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
 
+    private static final long GPS_TIMEOUT = 15000;
+
     private GoogleApiClient googleApiClient;
     private LocationRequest locationRequest;
     private Context context;
     private Double accuracy;
     private Callable<Integer> func_done;
+    private long processTime;
 
     public Double Latitude;
     public Double Longitude;
     public Location CurrentLocation;
+    public Boolean Error;
 
     MyLocationListener(Context CONTEXT, Double ACCURACY, Callable<Integer> FUNC_DONE) {
 
@@ -34,10 +39,12 @@ public class MyLocationListener implements
         Latitude = 0d;
         Longitude = 0d;
         func_done = FUNC_DONE;
+        Error = false;
     }
 
     public void startTracking() {
 
+        processTime = SystemClock.elapsedRealtime();
         googleApiClient = new GoogleApiClient.Builder(context)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
@@ -64,6 +71,15 @@ public class MyLocationListener implements
             Latitude = location.getLatitude();
             Longitude = location.getLongitude();
             CurrentLocation = location;
+            Error = false;
+
+            try {
+                func_done.call();
+            } catch (java.lang.Exception e) {
+            }
+        } else if ((SystemClock.elapsedRealtime() - processTime) > GPS_TIMEOUT) {
+            stopTracking();
+            Error = true;
 
             try {
                 func_done.call();

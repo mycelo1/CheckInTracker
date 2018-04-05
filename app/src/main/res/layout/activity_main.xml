@@ -46,12 +46,11 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:weightSum="3">
+            android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
                 android:layout_margin="10dp"
                 android:layout_weight="1"
                 android:background="@drawable/text_border"
@@ -68,8 +67,9 @@
                     android:textColor="@android:color/white" />
 
                 <ScrollView
+                    android:id="@+id/scroll_lastgps"
                     android:layout_width="match_parent"
-                    android:layout_height="fill_parent">
+                    android:layout_height="match_parent">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -88,7 +88,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
                 android:layout_margin="10dp"
                 android:layout_weight="1"
                 android:background="@drawable/text_border"
@@ -105,8 +105,9 @@
                     android:textColor="@android:color/white" />
 
                 <ScrollView
+                    android:id="@+id/scroll_checkin"
                     android:layout_width="match_parent"
-                    android:layout_height="fill_parent">
+                    android:layout_height="match_parent">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -125,7 +126,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
                 android:layout_margin="10dp"
                 android:layout_weight="1"
                 android:background="@drawable/text_border"
@@ -142,8 +143,9 @@
                     android:textColor="@android:color/white" />
 
                 <ScrollView
+                    android:id="@+id/scroll_checkout"
                     android:layout_width="match_parent"
-                    android:layout_height="fill_parent">
+                    android:layout_height="match_parent">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -173,75 +175,81 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:weightSum="6">
+            android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_margin="10dp"
-                android:layout_weight="5"
-                android:orientation="horizontal"
-                android:weightSum="5">
+                android:orientation="horizontal">
 
                 <TextView
-                    android:layout_width="fill_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:padding="2dp"
-                    android:text="@string/switch_tracking" />
+                    android:text="@string/switch_tracking"
+                    android:textSize="16sp" />
 
                 <Switch
                     android:id="@+id/switch_tracking"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="4" />
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
 
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="fill_parent"
+                android:layout_height="wrap_content"
                 android:layout_margin="10dp"
-                android:layout_weight="1"
-                android:background="@drawable/text_border"
-                android:orientation="vertical">
+                android:orientation="horizontal">
 
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:background="@color/colorPrimary"
-                    android:gravity="center"
+                    android:layout_weight="2"
+                    android:layout_gravity="bottom"
                     android:padding="2dp"
-                    android:text="@string/box_gpslog"
-                    android:textAlignment="center"
-                    android:textColor="@android:color/white" />
+                    android:text="@string/input_checkin_distance"
+                    android:textSize="16sp" />
 
-                <HorizontalScrollView
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent">
+                <EditText
+                    android:id="@+id/input_checkin_distance"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ems="4"
+                    android:gravity="end"
+                    android:hint="@string/hint_checkin_distance"
+                    android:inputType="number" />
 
-                    <ScrollView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content">
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/text_gpslog"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:padding="2dp"
-                                android:typeface="monospace" />
-
-                        </LinearLayout>
-                    </ScrollView>
-                </HorizontalScrollView>
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:layout_gravity="bottom"
+                    android:padding="2dp"
+                    android:text="@string/input_checkout_distance"
+                    android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/input_checkout_distance"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ems="4"
+                    android:gravity="end"
+                    android:hint="@string/hint_checkout_distance"
+                    android:inputType="number" />
+
+            </LinearLayout>
         </LinearLayout>
     </FrameLayout>
 

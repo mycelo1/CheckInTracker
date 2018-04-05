@@ -21,20 +21,17 @@ import java.util.TimeZone;
 
 public class LocationService extends Service {
 
-    private static final float CHECKIN_DISTANCE = 30f;
-    private static final float CHECKOUT_DISTANCE = 100f;
-
-    private static final float MIN_DISTANCE = 2000f;
-    private static final Integer MIN_INTERVAL = 60000;
+    private static final float MIN_DISTANCE = 1000f;
+    private static final Integer MIN_INTERVAL = 120000;
     private static final float MIN_ACCURACY = 20f;
 
-    private static final float MID_DISTANCE = 10000f;
-    private static final Integer MID_INTERVAL = 300000;
-    private static final float MID_ACCURACY = 500f;
+    private static final float MID_DISTANCE = 5000f;
+    private static final Integer MID_INTERVAL = 600000;
+    private static final float MID_ACCURACY = 250f;
 
-    private static final float MAX_DISTANCE = 100000f;
+    private static final float MAX_DISTANCE = 25000f;
     private static final Integer MAX_INTERVAL = 1800000;
-    private static final float MAX_ACCURACY = 1000f;
+    private static final float MAX_ACCURACY = 500f;
 
     private static final Integer SLEEP_INTERVAL = 3600000;
     private static final float SLEEP_ACCURACY = 1000f;
@@ -68,8 +65,12 @@ public class LocationService extends Service {
     }
 
     private void LocationListenerDone() {
-        Integer interval = processLocation(myLocationListener.CurrentLocation);
-        setNextAlarm(interval);
+        if (!myLocationListener.Error) {
+            Integer interval = processLocation(myLocationListener.CurrentLocation);
+            setNextAlarm(interval);
+        } else {
+            setNextAlarm(MIN_INTERVAL);
+        }
         currentlyProcessingLocation = false;
     }
 
@@ -77,9 +78,6 @@ public class LocationService extends Service {
 
         Integer current_interval;
         String event = "G";
-
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-        dateFormat.setTimeZone(TimeZone.getDefault());
         Date date = new Date(location.getTime());
 
         float latitude = (float) location.getLatitude();
@@ -90,16 +88,13 @@ public class LocationService extends Service {
         homeLocation.setLongitude(sharedPreferences.getFloat("homeLongitude", 0));
 
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("lastgpsDate", dateFormat.format(date));
-        editor.putFloat("lastgpsLatitude", latitude);
-        editor.putFloat("lastgpsLongitude", longitude);
         editor.putInt("lastgpsUpdate", random.nextInt());
 
+        float checkInDistance = sharedPreferences.getFloat("checkInDistance", 25);
+        float checkOutDistance = sharedPreferences.getFloat("checkOutDistance", 100);
+
         if (sharedPreferences.getBoolean("atHome", false)) {
-            if (location.distanceTo(homeLocation) > CHECKOUT_DISTANCE) {
-                editor.putFloat("checkoutLatitude", latitude);
-                editor.putFloat("checkoutLongitude", longitude);
-                editor.putString("checkoutDate", dateFormat.format(date));
+            if (location.distanceTo(homeLocation) > checkOutDistance) {
                 editor.putInt("checkoutUpdate", random.nextInt());
                 editor.putBoolean("atHome", false);
                 editor.putFloat("currentAccuracy", MIN_ACCURACY);
@@ -110,10 +105,7 @@ public class LocationService extends Service {
                 current_interval = MIN_INTERVAL;
             }
         } else {
-            if (location.distanceTo(homeLocation) < CHECKIN_DISTANCE) {
-                editor.putFloat("checkinLatitude", latitude);
-                editor.putFloat("checkinLongitude", longitude);
-                editor.putString("checkinDate", dateFormat.format(date));
+            if (location.distanceTo(homeLocation) < checkInDistance) {
                 editor.putInt("checkinUpdate", random.nextInt());
                 editor.putBoolean("atHome", true);
                 editor.putFloat("currentAccuracy", MIN_ACCURACY);
@@ -136,9 +128,9 @@ public class LocationService extends Service {
             }
         }
 
+        databaseHelper.insertLog(DatabaseHelper.formatDate(date), latitude, longitude, location.distanceTo(homeLocation), event);
+        sendMessageToActivity(DatabaseHelper.formatDate(date), latitude, longitude, location.distanceTo(homeLocation), event);
         editor.apply();
-        databaseHelper.insertLog(dateFormat.format(date), latitude, longitude, location.distanceTo(homeLocation), event);
-        sendMessageToActivity(dateFormat.format(date), latitude, longitude, location.distanceTo(homeLocation), event);
         return current_interval;
     }
 
