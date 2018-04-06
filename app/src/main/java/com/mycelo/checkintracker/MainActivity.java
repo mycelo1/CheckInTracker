@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -27,8 +28,9 @@ import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,14 +45,22 @@ public class MainActivity extends AppCompatActivity {
 
     private Button mButtonHome;
     private TextView mTextHome;
+    private TextView mLabelAtHome;
 
-    private TextView mTextLastgps;
-    private TextView mTextCheckin;
-    private TextView mTextCheckout;
+    private Button mButtonCheckIn;
+    private Button mButtonCheckOut;
 
-    private ScrollView mScrollLastgps;
-    private ScrollView mScrollCheckin;
-    private ScrollView mScrollCheckout;
+    private TextView mTextLastGps;
+    private TextView mTextCheckIn;
+    private TextView mTextCheckOut;
+
+    private TextView mHeaderLastGps;
+    private TextView mHeaderCheckIn;
+    private TextView mHeaderCheckOut;
+
+    private ScrollView mScrollLastGps;
+    private ScrollView mScrollCheckIn;
+    private ScrollView mScrollCheckOut;
 
     private Switch mSwitchTracking;
 
@@ -61,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     private MyLocationListener myLocationListener;
     private DatabaseHelper databaseHelper;
+    private Random random;
 
     private Boolean firstScreenUpdate;
     private Boolean homeUpdated;
@@ -74,6 +85,15 @@ public class MainActivity extends AppCompatActivity {
     private String checkinDate;
     private String checkoutDate;
 
+    private enum GpsAction {
+        gaNone,
+        gaSetHome,
+        gaForceCheckIn,
+        gaForceCheckOut
+    }
+
+    private GpsAction gpsAction;
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         baseContext = getBaseContext();
-
+        random = new Random();
         sharedPreferences = this.getSharedPreferences("com.mycelo.checkintracker.prefs", Context.MODE_PRIVATE);
         databaseHelper = new DatabaseHelper(baseContext);
         LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mMessageReceiver, new IntentFilter("gps_event"));
@@ -102,14 +122,22 @@ public class MainActivity extends AppCompatActivity {
 
         mButtonHome = (Button) findViewById(R.id.button_home);
         mTextHome = (TextView) findViewById(R.id.text_home);
+        mLabelAtHome = (TextView) findViewById(R.id.label_athome);
 
-        mTextLastgps = (TextView) findViewById(R.id.text_lastgps);
-        mTextCheckin = (TextView) findViewById(R.id.text_checkin);
-        mTextCheckout = (TextView) findViewById(R.id.text_checkout);
+        mButtonCheckIn = (Button) findViewById(R.id.button_checkin);
+        mButtonCheckOut = (Button) findViewById(R.id.button_checkout);
 
-        mScrollLastgps = (ScrollView) findViewById(R.id.scroll_lastgps);
-        mScrollCheckin = (ScrollView) findViewById(R.id.scroll_checkin);
-        mScrollCheckout = (ScrollView) findViewById(R.id.scroll_checkout);
+        mTextLastGps = (TextView) findViewById(R.id.text_lastgps);
+        mTextCheckIn = (TextView) findViewById(R.id.text_checkin);
+        mTextCheckOut = (TextView) findViewById(R.id.text_checkout);
+
+        mHeaderLastGps = (TextView) findViewById(R.id.header_lastgps);
+        mHeaderCheckIn = (TextView) findViewById(R.id.header_checkin);
+        mHeaderCheckOut = (TextView) findViewById(R.id.header_checkout);
+
+        mScrollLastGps = (ScrollView) findViewById(R.id.scroll_lastgps);
+        mScrollCheckIn = (ScrollView) findViewById(R.id.scroll_checkin);
+        mScrollCheckOut = (ScrollView) findViewById(R.id.scroll_checkout);
 
         mSwitchTracking = (Switch) findViewById(R.id.switch_tracking);
 
@@ -119,6 +147,8 @@ public class MainActivity extends AppCompatActivity {
         if (sharedPreferences.getBoolean("homeIsSet", false)) {
             mNavigation.setSelectedItemId(R.id.navigation_dashboard);
             mSwitchTracking.setChecked(sharedPreferences.getBoolean("currentlyTracking", false));
+            mButtonCheckIn.setEnabled(!sharedPreferences.getBoolean("atHome", false));
+            mButtonCheckOut.setEnabled(sharedPreferences.getBoolean("atHome", false));
         } else {
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putBoolean("currentlyTracking", false);
@@ -127,13 +157,16 @@ public class MainActivity extends AppCompatActivity {
             mNavigation.setSelectedItemId(R.id.navigation_home);
             mSwitchTracking.setChecked(false);
             mSwitchTracking.setEnabled(false);
+            mButtonCheckIn.setEnabled(false);
+            mButtonCheckOut.setEnabled(false);
         }
 
         mEditCheckInDistance.setText(String.format(Locale.US, "%.0f", sharedPreferences.getFloat("checkInDistance", 25)));
         mEditCheckOutDistance.setText(String.format(Locale.US, "%.0f", sharedPreferences.getFloat("checkOutDistance", 100)));
+        mEditCheckInDistance.clearFocus();
+        mEditCheckOutDistance.clearFocus();
 
-        mEditCheckInDistance.setEnabled(!mSwitchTracking.isChecked());
-        mEditCheckOutDistance.setEnabled(!mSwitchTracking.isChecked());
+        gpsAction = GpsAction.gaNone;
 
         firstScreenUpdate = true;
         homeUpdated = false;
@@ -147,10 +180,28 @@ public class MainActivity extends AppCompatActivity {
         checkinDate = "";
         checkoutDate = "";
 
+        updateControls();
+
         mButtonHome.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 HomeButtonClick();
+                return true;
+            }
+        });
+
+        mButtonCheckIn.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                CheckInButtonClick();
+                return true;
+            }
+        });
+
+        mButtonCheckOut.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                CheckOutButtonClick();
                 return true;
             }
         });
@@ -162,12 +213,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mScrollLastgps.setOnTouchListener(new OnSwipeTouchListener(baseContext) {
+        mScrollLastGps.setOnTouchListener(new OnSwipeTouchListener(baseContext) {
             @Override
             public void onSwipeLeft() {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getNextGps(lastgpsDate);
                 if (gps_event != null) {
-                    mTextLastgps.setText(makeLocationText(
+                    mTextLastGps.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -181,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
             public void onSwipeRight() {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getPreviousGps(lastgpsDate);
                 if (gps_event != null) {
-                    mTextLastgps.setText(makeLocationText(
+                    mTextLastGps.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -192,12 +243,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mScrollCheckin.setOnTouchListener(new OnSwipeTouchListener(baseContext) {
+        mScrollCheckIn.setOnTouchListener(new OnSwipeTouchListener(baseContext) {
             @Override
             public void onSwipeLeft() {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getNextGpsEvent("I", checkinDate);
                 if (gps_event != null) {
-                    mTextCheckin.setText(makeLocationText(
+                    mTextCheckIn.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -211,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
             public void onSwipeRight() {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getPreviousGpsEvent("I", checkinDate);
                 if (gps_event != null) {
-                    mTextCheckin.setText(makeLocationText(
+                    mTextCheckIn.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -222,12 +273,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mScrollCheckout.setOnTouchListener(new OnSwipeTouchListener(baseContext) {
+        mScrollCheckOut.setOnTouchListener(new OnSwipeTouchListener(baseContext) {
             @Override
             public void onSwipeLeft() {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getNextGpsEvent("O", checkoutDate);
                 if (gps_event != null) {
-                    mTextCheckout.setText(makeLocationText(
+                    mTextCheckOut.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -241,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
             public void onSwipeRight() {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getPreviousGpsEvent("O", checkoutDate);
                 if (gps_event != null) {
-                    mTextCheckout.setText(makeLocationText(
+                    mTextCheckOut.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -249,6 +300,46 @@ public class MainActivity extends AppCompatActivity {
                             gps_event.address));
                     checkoutDate = gps_event.date;
                 }
+            }
+        });
+
+        mHeaderCheckIn.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                databaseHelper.changeGpsEvent(checkinDate, "G");
+                DatabaseHelper.GpsEvent gps_event = databaseHelper.getPreviousGpsEvent("I", checkinDate);
+                if (gps_event != null) {
+                    mTextCheckIn.setText(makeLocationText(
+                            gps_event.date,
+                            gps_event.latitude,
+                            gps_event.longitude,
+                            gps_event.distance,
+                            gps_event.address));
+                    checkinDate = gps_event.date;
+                } else {
+                    mTextCheckIn.setText("");
+                }
+                return true;
+            }
+        });
+
+        mHeaderCheckOut.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                databaseHelper.changeGpsEvent(checkoutDate, "G");
+                DatabaseHelper.GpsEvent gps_event = databaseHelper.getPreviousGpsEvent("O", checkoutDate);
+                if (gps_event != null) {
+                    mTextCheckOut.setText(makeLocationText(
+                            gps_event.date,
+                            gps_event.latitude,
+                            gps_event.longitude,
+                            gps_event.distance,
+                            gps_event.address));
+                    checkoutDate = gps_event.date;
+                } else {
+                    mTextCheckOut.setText("");
+                }
+                return true;
             }
         });
 
@@ -291,40 +382,58 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void HomeButtonClick() {
+        makeGpsAction(GpsAction.gaSetHome);
+    }
+
+    private void CheckInButtonClick() {
+        makeGpsAction(GpsAction.gaForceCheckIn);
+    }
+
+    private void CheckOutButtonClick() {
+        makeGpsAction(GpsAction.gaForceCheckOut);
+    }
+
+    private void makeGpsAction(GpsAction GPS_ACTION) {
         trackingWasEnabled = mSwitchTracking.isChecked();
         mButtonHome.setEnabled(false);
+        mButtonCheckIn.setEnabled(false);
+        mButtonCheckOut.setEnabled(false);
         mSwitchTracking.setEnabled(false);
-        mSwitchTracking.setChecked(false);
         DisableTracking();
+        gpsAction = GPS_ACTION;
         myLocationListener.startTracking();
     }
 
     private void SwitchTrackingClick() {
-        mEditCheckInDistance.setEnabled(!mSwitchTracking.isChecked());
-        mEditCheckOutDistance.setEnabled(!mSwitchTracking.isChecked());
+        updateControls();
         if (mSwitchTracking.isChecked()) {
-            EnableTracking();
+            EnableTracking(Constants.TRK_ENABLE_INTERVAL);
         } else {
             DisableTracking();
         }
     }
 
-    private void EnableTracking() {
+    private void EnableTracking(Integer interval) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
+
         try {
             AlarmManager alarmManager = (AlarmManager) baseContext.getSystemService(Context.ALARM_SERVICE);
             Intent gpsTrackerIntent = new Intent(baseContext, AlarmReceiver.class);
             PendingIntent pendingIntent = PendingIntent.getBroadcast(baseContext, 0, gpsTrackerIntent, 0);
-            alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, 5000, pendingIntent);
+            alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, interval, pendingIntent);
         } catch (java.lang.Exception e) {
             e.printStackTrace();
         }
 
-        float checkInDistance = Float.valueOf(mEditCheckInDistance.getText().toString());
-        float checkOutDistance = Float.valueOf(mEditCheckOutDistance.getText().toString());
+        try {
+            float checkInDistance = Float.valueOf(mEditCheckInDistance.getText().toString());
+            float checkOutDistance = Float.valueOf(mEditCheckOutDistance.getText().toString());
+            editor.putFloat("checkInDistance", checkInDistance);
+            editor.putFloat("checkOutDistance", checkOutDistance);
+        } catch (java.lang.Exception e) {
+            e.printStackTrace();
+        }
 
-        editor.putFloat("checkInDistance", checkInDistance);
-        editor.putFloat("checkOutDistance", checkOutDistance);
         editor.putBoolean("currentlyTracking", true);
         editor.apply();
     }
@@ -344,41 +453,113 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void LocationListenerDone() {
-        if (!myLocationListener.Error) {
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean("homeIsSet", true);
-            editor.putBoolean("atHome", true);
-            editor.putFloat("homeLatitude", myLocationListener.Latitude.floatValue());
-            editor.putFloat("homeLongitude", myLocationListener.Longitude.floatValue());
-            editor.apply();
-            mSwitchTracking.setEnabled(true);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
 
-            if (trackingWasEnabled) {
-                mSwitchTracking.setChecked(true);
-                SwitchTrackingClick();
-            }
+        switch (gpsAction) {
+            case gaSetHome:
+                if (!myLocationListener.Error) {
+                    editor.putBoolean("homeIsSet", true);
+                    editor.putBoolean("atHome", true);
+                    editor.putFloat("homeLatitude", myLocationListener.Latitude.floatValue());
+                    editor.putFloat("homeLongitude", myLocationListener.Longitude.floatValue());
 
-            homeUpdated = true;
-        } else {
-            mTextHome.setText(getResources().getString(R.string.advice_homefailed));
+                    if (trackingWasEnabled) {
+                        EnableTracking(Constants.TRK_ENABLE_INTERVAL);
+                    }
+
+                    Date date = new Date(myLocationListener.CurrentLocation.getTime());
+                    databaseHelper.insertLog(DatabaseHelper.formatDate(date),
+                            myLocationListener.Latitude.floatValue(),
+                            myLocationListener.Longitude.floatValue(),
+                            0,
+                            "H");
+
+                    mButtonCheckIn.setEnabled(false);
+                    mButtonCheckOut.setEnabled(true);
+                    homeUpdated = true;
+                } else {
+                    editor.putBoolean("homeIsSet", false);
+                    mTextHome.setText(getResources().getString(R.string.advice_homefailed));
+                }
+                break;
+
+            case gaForceCheckIn:
+                if (!myLocationListener.Error) {
+                    float latitude = (float) myLocationListener.Latitude.floatValue();
+                    float longitude = (float) myLocationListener.Longitude.floatValue();
+                    Location homeLocation = new Location("");
+                    homeLocation.setLatitude(sharedPreferences.getFloat("homeLatitude", 0));
+                    homeLocation.setLongitude(sharedPreferences.getFloat("homeLongitude", 0));
+                    Date date = new Date(myLocationListener.CurrentLocation.getTime());
+
+                    editor.putInt("checkinUpdate", random.nextInt());
+                    editor.putBoolean("atHome", true);
+                    editor.putFloat("currentAccuracy", Constants.MIN_ACCURACY);
+
+                    databaseHelper.insertLog(DatabaseHelper.formatDate(date),
+                            latitude,
+                            longitude,
+                            myLocationListener.CurrentLocation.distanceTo(homeLocation),
+                            "I");
+
+                    if (trackingWasEnabled) {
+                        EnableTracking(Constants.AFTER_CHECK_INTERVAL);
+                    }
+                }
+
+                mButtonCheckIn.setEnabled(false);
+                mButtonCheckOut.setEnabled(true);
+                break;
+
+            case gaForceCheckOut:
+                if (!myLocationListener.Error) {
+                    float latitude = (float) myLocationListener.Latitude.floatValue();
+                    float longitude = (float) myLocationListener.Longitude.floatValue();
+                    Location homeLocation = new Location("");
+                    homeLocation.setLatitude(sharedPreferences.getFloat("homeLatitude", 0));
+                    homeLocation.setLongitude(sharedPreferences.getFloat("homeLongitude", 0));
+                    Date date = new Date(myLocationListener.CurrentLocation.getTime());
+
+                    editor.putInt("checkoutUpdate", random.nextInt());
+                    editor.putBoolean("atHome", false);
+                    editor.putFloat("currentAccuracy", Constants.MIN_ACCURACY);
+
+                    databaseHelper.insertLog(DatabaseHelper.formatDate(date),
+                            latitude,
+                            longitude,
+                            myLocationListener.CurrentLocation.distanceTo(homeLocation),
+                            "O");
+
+                    if (trackingWasEnabled) {
+                        EnableTracking(Constants.AFTER_CHECK_INTERVAL);
+                    }
+                }
+
+                mButtonCheckIn.setEnabled(false);
+                mButtonCheckOut.setEnabled(true);
+                break;
         }
+
+        editor.apply();
+        mSwitchTracking.setEnabled(true);
+        mButtonHome.setEnabled(true);
     }
 
     private void ScreenUpdate() {
-
         if (homeUpdated || firstScreenUpdate) {
             if (sharedPreferences.getBoolean("homeIsSet", false)) {
 
                 float latitude = sharedPreferences.getFloat("homeLatitude", 0f);
                 float longitude = sharedPreferences.getFloat("homeLongitude", 0f);
 
+                mButtonCheckIn.setEnabled(false);
+                mButtonCheckOut.setEnabled(true);
                 mTextHome.setText(String.format(Locale.US, "N/S %f°, W/L %f°%n%s",
                         latitude,
                         longitude,
                         databaseHelper.getCompleteAddress(latitude, longitude)));
-            } else {
-                mTextHome.setText(getResources().getString(R.string.advice_homenotset));
             }
+
             mButtonHome.setEnabled(true);
             homeUpdated = false;
         }
@@ -386,11 +567,11 @@ public class MainActivity extends AppCompatActivity {
         if (sharedPreferences.getBoolean("homeIsSet", false)) {
             int _lastgpsUpdate = sharedPreferences.getInt("lastgpsUpdate", 0);
             if (_lastgpsUpdate == 0) {
-                mTextLastgps.setText("");
+                mTextLastGps.setText("");
             } else if (_lastgpsUpdate != lastgpsUpdate) {
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getLastGps();
                 if (gps_event != null) {
-                    mTextLastgps.setText(makeLocationText(
+                    mTextLastGps.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -403,11 +584,13 @@ public class MainActivity extends AppCompatActivity {
 
             int _checkinUpdate = sharedPreferences.getInt("checkinUpdate", 0);
             if (_checkinUpdate == 0) {
-                mTextCheckin.setText("");
+                mTextCheckIn.setText("");
             } else if (_checkinUpdate != checkinUpdate) {
+                mButtonCheckIn.setEnabled(false);
+                mButtonCheckOut.setEnabled(true);
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getLastGpsEvent("I");
                 if (gps_event != null) {
-                    mTextCheckin.setText(makeLocationText(
+                    mTextCheckIn.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -420,11 +603,13 @@ public class MainActivity extends AppCompatActivity {
 
             int _checkoutUpdate = sharedPreferences.getInt("checkoutUpdate", 0);
             if (_checkoutUpdate == 0) {
-                mTextCheckout.setText("");
+                mTextCheckOut.setText("");
             } else if (_checkoutUpdate != checkoutUpdate) {
+                mButtonCheckIn.setEnabled(true);
+                mButtonCheckOut.setEnabled(false);
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getLastGpsEvent("O");
                 if (gps_event != null) {
-                    mTextCheckout.setText(makeLocationText(
+                    mTextCheckOut.setText(makeLocationText(
                             gps_event.date,
                             gps_event.latitude,
                             gps_event.longitude,
@@ -436,7 +621,27 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        updateHomeLabel();
         firstScreenUpdate = false;
+    }
+
+    private void updateHomeLabel() {
+        if (sharedPreferences.getBoolean("homeIsSet", false)) {
+            if (sharedPreferences.getBoolean("atHome", false)) {
+                mLabelAtHome.setText(getResources().getString(R.string.label_athome));
+            } else {
+                mLabelAtHome.setText(getResources().getString(R.string.label_notathome));
+            }
+        } else {
+            mLabelAtHome.setText(getResources().getString(R.string.label_nohome));
+        }
+    }
+
+    private void updateControls() {
+        mEditCheckInDistance.setEnabled(!mSwitchTracking.isChecked());
+        mEditCheckOutDistance.setEnabled(!mSwitchTracking.isChecked());
+        mEditCheckInDistance.clearFocus();
+        mEditCheckOutDistance.clearFocus();
     }
 
     private String makeLocationText(String date, String latitude, String longitude, String distance, String address) {
@@ -452,6 +657,7 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            //
         }
     };
 

@@ -21,21 +21,6 @@ import java.util.TimeZone;
 
 public class LocationService extends Service {
 
-    private static final float MIN_DISTANCE = 1000f;
-    private static final Integer MIN_INTERVAL = 120000;
-    private static final float MIN_ACCURACY = 20f;
-
-    private static final float MID_DISTANCE = 5000f;
-    private static final Integer MID_INTERVAL = 600000;
-    private static final float MID_ACCURACY = 250f;
-
-    private static final float MAX_DISTANCE = 25000f;
-    private static final Integer MAX_INTERVAL = 1800000;
-    private static final float MAX_ACCURACY = 500f;
-
-    private static final Integer SLEEP_INTERVAL = 3600000;
-    private static final float SLEEP_ACCURACY = 1000f;
-
     private static boolean currentlyProcessingLocation = false;
 
     private Context baseContext;
@@ -52,7 +37,7 @@ public class LocationService extends Service {
         sharedPreferences = this.getSharedPreferences("com.mycelo.checkintracker.prefs", Context.MODE_PRIVATE);
         databaseHelper = new DatabaseHelper(baseContext);
 
-        double current_accuracy = sharedPreferences.getFloat("currentAccuracy", MIN_ACCURACY);
+        double current_accuracy = sharedPreferences.getFloat("currentAccuracy", Constants.MIN_ACCURACY);
 
         myLocationListener = new MyLocationListener(this, current_accuracy, new Callable<Integer>() {
             public Integer call() {
@@ -69,7 +54,7 @@ public class LocationService extends Service {
             Integer interval = processLocation(myLocationListener.CurrentLocation);
             setNextAlarm(interval);
         } else {
-            setNextAlarm(MIN_INTERVAL);
+            setNextAlarm(Constants.MIN_INTERVAL);
         }
         currentlyProcessingLocation = false;
     }
@@ -97,33 +82,33 @@ public class LocationService extends Service {
             if (location.distanceTo(homeLocation) > checkOutDistance) {
                 editor.putInt("checkoutUpdate", random.nextInt());
                 editor.putBoolean("atHome", false);
-                editor.putFloat("currentAccuracy", MIN_ACCURACY);
-                current_interval = MAX_INTERVAL;
+                editor.putFloat("currentAccuracy", Constants.MIN_ACCURACY);
+                current_interval = Constants.AFTER_CHECK_INTERVAL;
                 event = "O";
             } else {
-                editor.putFloat("currentAccuracy", MIN_ACCURACY);
-                current_interval = MIN_INTERVAL;
+                editor.putFloat("currentAccuracy", Constants.MIN_ACCURACY);
+                current_interval = Constants.MIN_INTERVAL;
             }
         } else {
             if (location.distanceTo(homeLocation) < checkInDistance) {
                 editor.putInt("checkinUpdate", random.nextInt());
                 editor.putBoolean("atHome", true);
-                editor.putFloat("currentAccuracy", MIN_ACCURACY);
-                current_interval = MAX_INTERVAL;
+                editor.putFloat("currentAccuracy", Constants.MIN_ACCURACY);
+                current_interval = Constants.AFTER_CHECK_INTERVAL;
                 event = "I";
             } else {
-                if (location.distanceTo(homeLocation) < MIN_DISTANCE) {
-                    editor.putFloat("currentAccuracy", MIN_ACCURACY);
-                    current_interval = MIN_INTERVAL;
-                } else if (location.distanceTo(homeLocation) < MID_DISTANCE) {
-                    editor.putFloat("currentAccuracy", MID_ACCURACY);
-                    current_interval = MID_INTERVAL;
-                } else if (location.distanceTo(homeLocation) < MAX_DISTANCE) {
-                    editor.putFloat("currentAccuracy", MAX_ACCURACY);
-                    current_interval = MAX_INTERVAL;
+                if (location.distanceTo(homeLocation) < Constants.MIN_DISTANCE) {
+                    editor.putFloat("currentAccuracy", Constants.MIN_ACCURACY);
+                    current_interval = Constants.MIN_INTERVAL;
+                } else if (location.distanceTo(homeLocation) < Constants.MID_DISTANCE) {
+                    editor.putFloat("currentAccuracy", Constants.MID_ACCURACY);
+                    current_interval = Constants.MID_INTERVAL;
+                } else if (location.distanceTo(homeLocation) < Constants.MAX_DISTANCE) {
+                    editor.putFloat("currentAccuracy", Constants.MAX_ACCURACY);
+                    current_interval = Constants.MAX_INTERVAL;
                 } else {
-                    editor.putFloat("currentAccuracy", SLEEP_ACCURACY);
-                    current_interval = SLEEP_INTERVAL;
+                    editor.putFloat("currentAccuracy", Constants.SLEEP_ACCURACY);
+                    current_interval = Constants.SLEEP_INTERVAL;
                 }
             }
         }

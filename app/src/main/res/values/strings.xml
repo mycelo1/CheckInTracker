@@ -4,17 +4,23 @@
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Settings</string>
     <string name="button_home">LONG-PRESS TO SET HOME</string>
-    <string name="button_checkin">LONG-PRESS TO FORCE CHECK-IN</string>
-    <string name="button_checkout">LONG-PRESS TO FORCE CHECK-OUT</string>
+    <string name="label_athome">YOU ARE AT HOME</string>
+    <string name="label_notathome">YOU ARE NOT AT HOME</string>
+    <string name="label_nohome">HOME NOT SET</string>
+    <string name="button_checkin">LONG-PRESS\nTO FORCE CHECK-IN</string>
+    <string name="button_checkout">LONG-PRESS\nTO FORCE CHECK-OUT</string>
     <string name="box_lastgps">LAST GPS READING</string>
     <string name="box_checkin">LAST CHECK-IN</string>
     <string name="box_checkout">LAST CHECK-OUT</string>
     <string name="box_gpslog">GPS LOG</string>
     <string name="switch_tracking">Tracking enabled</string>
-    <string name="advice_homenotset">HOME NOT SET</string>
+    <string name="advice_homenotset"></string>
     <string name="advice_homefailed">UNABLE TO GET GPS COORDINATES</string>
     <string name="input_checkin_distance">Check-in distance</string>
     <string name="hint_checkin_distance">meters</string>
     <string name="input_checkout_distance">Check-out distance</string>
     <string name="hint_checkout_distance">meters</string>
+    <string name="dialog_delete_text">Remove this entry?</string>
+    <string name="dialog_delete_yes">YES</string>
+    <string name="dialog_delete_no">NO</string>
 </resources>

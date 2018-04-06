@@ -50,8 +50,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS gps_log");
-        onCreate(db);
+        //
     }
 
     public boolean insertLog(String date, float latitude, float longitude, float distance, String event) {
@@ -140,6 +139,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public GpsEvent getLastGpsEvent(String event) {
         return getPreviousGpsEvent(event, MAX_DATE);
+    }
+
+    public void changeGpsEvent(String date, String event) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("event", event);
+        db.update("gps_log", cv, "date = ?", new String[] {date});
     }
 
     private GpsEvent getFirstGpsEvent(Cursor cursor) {
