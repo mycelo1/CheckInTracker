@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Check-In Tracker</string>
+    <string name="title_home">Casa</string>
+    <string name="title_dashboard">Painel</string>
+    <string name="title_notifications">Configurações</string>
+    <string name="button_home">MANTER PRESSIONADO PARA DEFINIR CASA</string>
+    <string name="label_athome">VOCÊ ESTÁ EM CASA</string>
+    <string name="label_notathome">VOCÊ NÃO ESTÁ EM CASA</string>
+    <string name="label_nohome">CASA NÃO DEFINIDA</string>
+    <string name="button_checkin">MANTER PRESSIONADO\nPARA FAZER ENTRADA</string>
+    <string name="button_checkout">MANTER PRESSIONADO\nPARA FAZER SAÍDA</string>
+    <string name="box_lastgps">ÚLTIMA LEITURA DE GPS</string>
+    <string name="box_checkin">ÚLTIMA ENTRADA</string>
+    <string name="box_checkout">ÚLTIMA SAÍDA</string>
+    <string name="box_gpslog">LOG DE GPS</string>
+    <string name="switch_tracking">Rastreamento ativado</string>
+    <string name="advice_homenotset"> </string>
+    <string name="advice_homefailed">FALHA NA LOCALIZAÇÃO POR GPS</string>
+    <string name="input_checkin_distance">Distância na entrada</string>
+    <string name="hint_checkin_distance">metros</string>
+    <string name="input_checkout_distance">Distância na saída</string>
+    <string name="hint_checkout_distance">metros</string>
+    <string name="dialog_delete_text">Remover este registro?</string>
+    <string name="dialog_delete_yes">SIM</string>
+    <string name="dialog_delete_no">NÃO</string>
+    <string name="string_gpsbox">%s%nN/S %s°, O/L %s°%n%s metros de casa%n%s</string>
+</resources>

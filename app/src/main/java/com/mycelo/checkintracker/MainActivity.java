@@ -644,7 +644,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String makeLocationText(String date, String latitude, String longitude, String distance, String address) {
-        return String.format(Locale.US, "%s%nN/S %s°, W/L %s°%n%s meters from home%n%s",
+        return String.format(Locale.US, getResources().getString(R.string.string_gpsbox),
                 date,
                 latitude,
                 longitude,
