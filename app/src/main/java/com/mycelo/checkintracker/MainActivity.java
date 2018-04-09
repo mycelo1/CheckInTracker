@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.ActivityCompat;
@@ -420,7 +421,7 @@ public class MainActivity extends AppCompatActivity {
             AlarmManager alarmManager = (AlarmManager) baseContext.getSystemService(Context.ALARM_SERVICE);
             Intent gpsTrackerIntent = new Intent(baseContext, AlarmReceiver.class);
             PendingIntent pendingIntent = PendingIntent.getBroadcast(baseContext, 0, gpsTrackerIntent, 0);
-            alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, interval, pendingIntent);
+            alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() +  interval, pendingIntent);
         } catch (java.lang.Exception e) {
             e.printStackTrace();
         }
@@ -552,8 +553,6 @@ public class MainActivity extends AppCompatActivity {
                 float latitude = sharedPreferences.getFloat("homeLatitude", 0f);
                 float longitude = sharedPreferences.getFloat("homeLongitude", 0f);
 
-                mButtonCheckIn.setEnabled(false);
-                mButtonCheckOut.setEnabled(true);
                 mTextHome.setText(String.format(Locale.US, "N/S %f°, W/L %f°%n%s",
                         latitude,
                         longitude,
@@ -586,8 +585,6 @@ public class MainActivity extends AppCompatActivity {
             if (_checkinUpdate == 0) {
                 mTextCheckIn.setText("");
             } else if (_checkinUpdate != checkinUpdate) {
-                mButtonCheckIn.setEnabled(false);
-                mButtonCheckOut.setEnabled(true);
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getLastGpsEvent("I");
                 if (gps_event != null) {
                     mTextCheckIn.setText(makeLocationText(
@@ -605,8 +602,6 @@ public class MainActivity extends AppCompatActivity {
             if (_checkoutUpdate == 0) {
                 mTextCheckOut.setText("");
             } else if (_checkoutUpdate != checkoutUpdate) {
-                mButtonCheckIn.setEnabled(true);
-                mButtonCheckOut.setEnabled(false);
                 DatabaseHelper.GpsEvent gps_event = databaseHelper.getLastGpsEvent("O");
                 if (gps_event != null) {
                     mTextCheckOut.setText(makeLocationText(
@@ -628,8 +623,12 @@ public class MainActivity extends AppCompatActivity {
     private void updateHomeLabel() {
         if (sharedPreferences.getBoolean("homeIsSet", false)) {
             if (sharedPreferences.getBoolean("atHome", false)) {
+                mButtonCheckIn.setEnabled(false);
+                mButtonCheckOut.setEnabled(true);
                 mLabelAtHome.setText(getResources().getString(R.string.label_athome));
             } else {
+                mButtonCheckIn.setEnabled(true);
+                mButtonCheckOut.setEnabled(false);
                 mLabelAtHome.setText(getResources().getString(R.string.label_notathome));
             }
         } else {
